@@ -7,6 +7,7 @@ import io
 import shutil
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -15,7 +16,12 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from main import main  # noqa: E402
-from make_test_iso import build_image, demo_tree  # noqa: E402
+from make_test_iso import (  # noqa: E402
+    build_image,
+    demo_tree,
+    retarget_root_directory,
+)
+from xdvdfs import XDVDFSVolume  # noqa: E402
 
 
 class CliTestCase(unittest.TestCase):
@@ -49,6 +55,22 @@ class CliTestCase(unittest.TestCase):
         self.assertIn("media/", out)
         self.assertIn("theme.xma", out)
         self.assertIn("default.xex", out)
+
+    def test_list_image_cyclique(self) -> None:
+        path = build_image(self.tmp / "cli_cycle.iso", {"a": {}, "b": {}})
+        with XDVDFSVolume.open(path) as volume:
+            root_sector, root_size = volume.root.sector, volume.root.size
+        retarget_root_directory(path, "a", root_sector, root_size)
+        retarget_root_directory(path, "b", root_sector, root_size)
+
+        start = time.monotonic()
+        code, out, err = self._run("--iso", str(path), "--list")
+        elapsed = time.monotonic() - start
+
+        self.assertIn(code, (0, 1), err)
+        self.assertLess(elapsed, 5.0, "--list bloque sur une image cyclique")
+        if code == 0:
+            self.assertIn("a/", out)
 
     def test_extract_fichier(self) -> None:
         out_dir = self.tmp / "cli_file"

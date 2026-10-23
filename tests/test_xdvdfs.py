@@ -5,14 +5,21 @@ from __future__ import annotations
 import shutil
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from make_test_iso import build_image, demo_tree, manifest  # noqa: E402
+from make_test_iso import (  # noqa: E402
+    build_image,
+    demo_tree,
+    manifest,
+    retarget_root_directory,
+)
 from xdvdfs import (  # noqa: E402
     ExtractionCancelled,
     XDVDFSError,
@@ -144,6 +151,53 @@ class XDVDFSTestCase(unittest.TestCase):
         walked = {"/".join(parts) for parts, _ in self.volume.walk()}
         expected = {path for path, _, _ in self.expected}
         self.assertEqual(walked, expected)
+
+    def test_walk_cycle_par_ancetres(self) -> None:
+        path = build_image(
+            self.tmp / "cycle.iso", {"a": {}, "b": {}, "readme.txt": b"ok"}
+        )
+        with XDVDFSVolume.open(path) as volume:
+            root_sector, root_size = volume.root.sector, volume.root.size
+        retarget_root_directory(path, "a", root_sector, root_size)
+        retarget_root_directory(path, "b", root_sector, root_size)
+
+        with XDVDFSVolume.open(path) as volume:
+            start = time.monotonic()
+            entries = list(volume.walk())
+            elapsed = time.monotonic() - start
+
+        self.assertLess(elapsed, 2.0, "walk() boucle sur une image cyclique")
+        names = [entry.name for _, entry in entries]
+        self.assertEqual(sorted(names), ["a", "b", "readme.txt"])
+
+    def test_walk_dossier_partage_sans_cycle(self) -> None:
+        path = build_image(
+            self.tmp / "partage.iso",
+            {"a": {}, "b": {}, "z": {"f.bin": b"partage"}},
+        )
+        with XDVDFSVolume.open(path) as volume:
+            shared = volume.find("z")
+            assert shared is not None
+            shared_sector, shared_size = shared.sector, shared.size
+        retarget_root_directory(path, "a", shared_sector, shared_size)
+        retarget_root_directory(path, "b", shared_sector, shared_size)
+
+        with XDVDFSVolume.open(path) as volume:
+            walked = {"/".join(parts) for parts, _ in volume.walk()}
+
+        self.assertIn("a/f.bin", walked)
+        self.assertIn("b/f.bin", walked)
+        self.assertIn("z/f.bin", walked)
+
+    def test_walk_plafond_entrees(self) -> None:
+        path = build_image(
+            self.tmp / "plafond.iso", {f"file{index}.bin": b"x" for index in range(6)}
+        )
+        with XDVDFSVolume.open(path) as volume:
+            with mock.patch("xdvdfs.MAX_WALK_ENTRIES", 3):
+                with self.assertRaises(XDVDFSError) as caught:
+                    list(volume.walk())
+        self.assertIn("trop d'entrées", str(caught.exception))
 
     def test_read_hors_limites(self) -> None:
         with self.assertRaises(XDVDFSError):

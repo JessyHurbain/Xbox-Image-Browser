@@ -224,6 +224,35 @@ def build_image(
     return out_path
 
 
+def retarget_root_directory(
+    image_path: str | Path, name: str, sector: int, size: int
+) -> None:
+    """Fait pointer l'entrée ``name`` de la racine vers la table (sector, size).
+
+    Sert aux tests à fabriquer un cycle (cible = racine) ou un dossier
+    partagé par plusieurs branches (même cible, sans cycle).
+    """
+    image_path = Path(image_path)
+    with open(image_path, "r+b") as fp:
+        fp.seek(DESCRIPTOR_SECTOR * SECTOR + 0x14)
+        root_sector, root_size = struct.unpack("<II", fp.read(8))
+        table_offset = root_sector * SECTOR
+        fp.seek(table_offset)
+        table = fp.read(root_size)
+        offset = 0
+        while offset + 14 <= len(table):
+            _left, _right, _sector, _size, _attrs, name_len = struct.unpack_from(
+                "<HHIIBB", table, offset
+            )
+            entry_name = table[offset + 14 : offset + 14 + name_len].decode("latin-1")
+            if entry_name == name:
+                fp.seek(table_offset + offset + 4)
+                fp.write(struct.pack("<II", sector, size))
+                return
+            offset += align4(14 + name_len)
+    raise KeyError(f"Entrée {name!r} absente de la racine")
+
+
 def manifest(tree: dict, prefix: str = "") -> list[tuple[str, bool, bytes]]:
     """Liste ``(chemin, est_dossier, contenu)`` attendue après extraction."""
     entries: list[tuple[str, bool, bytes]] = []
