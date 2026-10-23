@@ -11,6 +11,13 @@ extraction vers le disque, sans jamais charger l'image complète en mémoire.
 *Image de démonstration ouverte : arborescence chargée à la demande, colonnes
 taille et secteur, extraction et empreintes accessibles en un clic.*
 
+## Avertissement
+
+Cet outil est développé à des fins de préservation numérique et
+d'interopérabilité. Il ne contient aucun code ni clé propriétaire Microsoft.
+L'utilisateur est seul responsable de se conformer aux lois sur le droit
+d'auteur applicables dans son pays concernant les fichiers qu'il manipule.
+
 ## Fonctionnalités
 
 - Détection automatique du format : XISO / XDVDFS, **XGD2**, **XGD3**.
