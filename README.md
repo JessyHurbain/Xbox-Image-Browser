@@ -39,8 +39,9 @@ extraction vers le disque, sans jamais charger l'image complète en mémoire.
 ├── xdvdfs.py             # parseur / extracteur XDVDFS (aucune dépendance GUI)
 ├── requirements.txt      # PyQt6
 ├── build_windows.bat     # build .exe sur Windows (venv, tests, PyInstaller)
-├── XboxImageBrowser.spec # configuration PyInstaller onefile
-├── packaging/            # métadonnées de version Windows
+├── build_appimage.sh     # build AppImage sur Linux (venv, tests, PyInstaller)
+├── XboxImageBrowser.spec # configuration PyInstaller onefile (Windows)
+├── packaging/            # version Windows, spec Linux, AppRun et .desktop
 ├── assets/               # icônes PNG / ICO
 ├── tools/make_icon.py    # régénération de l'icône (Pillow)
 ├── .github/workflows/    # build Windows automatisé (artefact)
@@ -112,8 +113,8 @@ sur Windows.
    en cochant **Add python.exe to PATH**.
 2. Double-cliquer **`build_windows.bat`**.
 
-Le script crée `.venv-build`, installe PyQt6 + PyInstaller, lance les 36 tests,
-puis produit :
+Le script crée `.venv-build`, installe PyQt6 + PyInstaller, lance tous les
+tests, puis produit :
 
 - `dist\XboxImageBrowser.exe` (onefile, environ 60–90 Mo) ;
 - `dist\demo.iso` (image de démonstration à ouvrir directement).
@@ -136,6 +137,36 @@ Run workflow** (ou créer un tag `v1.0.0`). L'artefact
 - **Licence** : PyQt6 est distribué sous GPLv3. Publier l'exe implique de
   fournir le code source sous GPLv3. Pour une distribution propriétaire,
   utiliser PySide6 (LGPL) ou une licence commerciale Qt.
+
+## AppImage Linux
+
+```bash
+./build_appimage.sh
+```
+
+Le script crée `.venv-build`, installe PyQt6 + PyInstaller, lance tous les
+tests, puis assemble l'AppDir (`packaging/AppRun` et
+`packaging/xbox-image-browser.desktop`) et produit :
+
+- `dist/XboxImageBrowser-x86_64.AppImage` (environ 55 Mo) ;
+- `dist/demo.iso` (image de démonstration à ouvrir directement).
+
+Prérequis : Python 3 avec le module `venv` et `curl` ; `appimagetool` est
+téléchargé dans `.build-tools/` au premier lancement, puis réutilisé.
+
+L'AppImage est autonome (Python, PyQt6 et Qt embarqués) : aucune installation.
+Rendre le fichier exécutable si nécessaire (`chmod +x`), puis le lancer ou
+double-cliquer dessus.
+
+### Remarques
+
+- FUSE est requis pour exécuter une AppImage. Sur Ubuntu 22.04+ :
+  `sudo apt install libfuse2`. Sans FUSE, utiliser
+  `--appimage-extract-and-run`.
+- Le binaire est lié à la glibc de la machine de build : construire sur la
+  distribution la plus ancienne à cibler.
+- Application fenêtrée, comme l'exe Windows : pour le CLI, utiliser
+  `python main.py …`.
 
 ## Détails du format XDVDFS
 

@@ -1,0 +1,5 @@
+#!/bin/sh
+# Point d'entrée de l'AppImage : lance le bundle PyInstaller embarqué.
+set -e
+HERE="$(dirname "$(readlink -f "$0")")"
+exec "$HERE/usr/bin/XboxImageBrowser" "$@"

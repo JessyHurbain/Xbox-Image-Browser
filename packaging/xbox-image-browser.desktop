@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Xbox Image Browser
+GenericName=Explorateur d'images Xbox 360
+Comment=Parcourir et extraire les fichiers d'une image Xbox 360 (XDVDFS)
+Exec=XboxImageBrowser
+Icon=xbox-image-browser
+Terminal=false
+Categories=Utility;FileManager;
+Keywords=xbox;xbox360;iso;xdvdfs;extract;extraction;
+StartupWMClass=XboxImageBrowser
