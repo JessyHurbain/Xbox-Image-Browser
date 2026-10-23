@@ -606,9 +606,12 @@ class MainWindow(QMainWindow):
         except (XDVDFSError, OSError) as exc:
             if volume is not None:
                 volume.close()
-            QMessageBox.critical(
-                self, "Ouverture impossible", f"{Path(path).name}\n\n{exc}"
-            )
+            box = QMessageBox(self)
+            box.setIcon(QMessageBox.Icon.Critical)
+            box.setWindowTitle("Ouverture impossible")
+            box.setTextFormat(Qt.TextFormat.PlainText)
+            box.setText(f"{Path(path).name}\n\n{exc}")
+            box.exec()
             self.statusBar().showMessage(
                 "Image précédente conservée"
                 if self.volume is not None
@@ -1013,6 +1016,7 @@ class MainWindow(QMainWindow):
                 box = QMessageBox(self)
                 box.setIcon(QMessageBox.Icon.Warning)
                 box.setWindowTitle("Extraction terminée avec des avertissements")
+                box.setTextFormat(Qt.TextFormat.PlainText)
                 box.setText(message)
                 box.setInformativeText(
                     f"{len(payload.errors)} élément(s) ignoré(s) ou en erreur."
@@ -1037,7 +1041,12 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage("Opération annulée", 6000)
         elif kind == "error":
             self.statusBar().showMessage("Opération interrompue", 6000)
-            QMessageBox.critical(self, "Erreur", str(payload))
+            box = QMessageBox(self)
+            box.setIcon(QMessageBox.Icon.Critical)
+            box.setWindowTitle("Erreur")
+            box.setTextFormat(Qt.TextFormat.PlainText)
+            box.setText(str(payload))
+            box.exec()
 
     # ------------------------------------------------------------------ #
     # Menus contextuels et divers
