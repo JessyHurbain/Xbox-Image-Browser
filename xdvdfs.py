@@ -54,6 +54,7 @@ COPY_CHUNK = 1024 * 1024
 
 MAX_DIRECTORY_SIZE = 16 * 1024 * 1024
 MAX_DIRECTORY_DEPTH = 64
+MAX_WALK_ENTRIES = 1_000_000
 ATTR_DIRECTORY = 0x10
 ATTR_READONLY = 0x01
 
@@ -425,27 +426,46 @@ class XDVDFSVolume:
     def walk(
         self, entry: Optional[DirEntry] = None
     ) -> Iterator[tuple[tuple[str, ...], DirEntry]]:
-        """Parcourt récursivement l'arborescence : ``(chemin, entrée)``."""
+        """Parcourt récursivement l'arborescence : ``(chemin, entrée)``.
+
+        La descente est refusée dans un répertoire dont la clé
+        ``(sector, size)`` figure déjà parmi ses ancêtres : deux branches
+        peuvent partager la même table, mais un cycle ne boucle jamais.
+        Le nombre total d'entrées produites est plafonné par
+        :data:`MAX_WALK_ENTRIES`.
+        """
         root = self.root if entry is None else entry
-        stack: list[tuple[tuple[str, ...], Iterator[DirEntry], int]] = [
-            ((), iter(self.list_directory(root)), 0)
-        ]
+        root_key = (root.sector, root.size)
+        stack: list[
+            tuple[tuple[str, ...], Iterator[DirEntry], int, frozenset[tuple[int, int]]]
+        ] = [((), iter(self.list_directory(root)), 0, frozenset({root_key}))]
+        produced = 0
         while stack:
-            parts, iterator, depth = stack[-1]
+            parts, iterator, depth, ancestors = stack[-1]
             try:
                 child = next(iterator)
             except StopIteration:
                 stack.pop()
                 continue
             child_parts = parts + (child.name,)
+            produced += 1
+            if produced > MAX_WALK_ENTRIES:
+                raise XDVDFSError(
+                    "Image trop volumineuse ou corrompue : trop d'entrées."
+                )
             yield child_parts, child
             if child.is_dir and depth < MAX_DIRECTORY_DEPTH:
+                key = (child.sector, child.size)
+                if key in ancestors:
+                    continue
                 try:
                     children = self.list_directory(child)
                 except XDVDFSError:
                     continue
                 if children:
-                    stack.append((child_parts, iter(children), depth + 1))
+                    stack.append(
+                        (child_parts, iter(children), depth + 1, ancestors | {key})
+                    )
 
     def find(self, image_path: str) -> Optional[DirEntry]:
         """Retrouve une entrée par chemin (insensible à la casse)."""
