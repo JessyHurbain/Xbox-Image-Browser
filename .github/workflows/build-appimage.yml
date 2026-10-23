@@ -1,0 +1,43 @@
+name: Build Linux AppImage
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  appimage:
+    # Ubuntu 22.04 (glibc 2.35) : l'AppImage reste compatible avec les
+    # distributions plus anciennes que la machine de build.
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Recuperer le depot
+        uses: actions/checkout@v4
+
+      - name: Installer Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Installer les bibliotheques Qt
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libegl1 libgl1 libxkbcommon-x11-0 libxcb-cursor0
+
+      - name: Construire l'AppImage
+        run: ./build_appimage.sh
+
+      - name: Publier l'artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: XboxImageBrowser-linux
+          path: |
+            dist/XboxImageBrowser-x86_64.AppImage
+            dist/demo.iso
+          if-no-files-found: error

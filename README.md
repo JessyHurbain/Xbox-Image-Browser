@@ -154,6 +154,9 @@ tests, puis assemble l'AppDir (`packaging/AppRun` et
 Prérequis : Python 3 avec le module `venv` et `curl` ; `appimagetool` est
 téléchargé dans `.build-tools/` au premier lancement, puis réutilisé.
 
+Le workflow `.github/workflows/build-appimage.yml` construit et publie
+l'artefact `XboxImageBrowser-linux` à chaque tag `v*` (ou manuellement).
+
 L'AppImage est autonome (Python, PyQt6 et Qt embarqués) : aucune installation.
 Rendre le fichier exécutable si nécessaire (`chmod +x`), puis le lancer ou
 double-cliquer dessus.
