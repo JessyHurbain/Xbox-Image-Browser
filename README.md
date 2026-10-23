@@ -27,7 +27,9 @@ extraction vers le disque, sans jamais charger l'image complète en mémoire.
   par blocs, sur les fichiers ou dossiers sélectionnés (récursif), résultats
   copiables au format TSV.
 - Noms de fichiers assainis pour l'hôte (caractères interdits, `CON`, `NUL`,
-  collisions de casse) et protection contre les répertoires cycliques.
+  collisions de casse). `walk()`, `tree_totals()` et l'extraction détectent
+  les répertoires cycliques par leurs ancêtres, et `walk()` est plafonné à
+  1 000 000 d'entrées pour neutraliser les images piégées.
 - Mode ligne de commande pour lister, inspecter et extraire sans GUI.
 
 ## Structure
