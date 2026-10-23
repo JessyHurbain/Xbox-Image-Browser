@@ -4,6 +4,13 @@ Explorateur et extracteur d'images disque Xbox / Xbox 360 (`.iso`, `.xiso`) :
 lecture du système de fichiers **XDVDFS**, navigation dans l'arborescence et
 extraction vers le disque, sans jamais charger l'image complète en mémoire.
 
+## Aperçu
+
+![Interface principale de Xbox Image Browser](screenshot.png)
+
+*Image de démonstration ouverte : arborescence chargée à la demande, colonnes
+taille et secteur, extraction et empreintes accessibles en un clic.*
+
 ## Fonctionnalités
 
 - Détection automatique du format : XISO / XDVDFS, **XGD2**, **XGD3**.
@@ -46,7 +53,8 @@ extraction vers le disque, sans jamais charger l'image complète en mémoire.
 ├── packaging/            # version Windows, spec Linux, AppRun et .desktop
 ├── assets/               # icônes PNG / ICO
 ├── tools/make_icon.py    # régénération de l'icône (Pillow)
-├── .github/workflows/    # build Windows automatisé (artefact)
+├── LICENSE               # texte GPLv3
+├── .github/workflows/    # builds Windows et Linux automatisés (artefacts)
 ├── demo/demo.iso         # image de démonstration générée localement
 └── tests/
     ├── make_test_iso.py  # générateur d'images XDVDFS synthétiques
@@ -65,21 +73,54 @@ pip install -r requirements.txt
 
 ## Utilisation
 
+### Interface graphique
+
 ```bash
-python main.py                    # interface graphique
-python main.py demo/demo.iso      # GUI avec une image préchargée
+python main.py                    # fenêtre vide
+python main.py demo/demo.iso      # image préchargée
 ```
 
-Dans la fenêtre : **Ouvrir une image ISO…**, dépliez les dossiers, sélectionnez
-un ou plusieurs éléments (Ctrl/Shift pour la sélection multiple) puis
-**Extraire la sélection…** ou **Tout extraire…**.
+1. **Ouvrir une image** — bouton *Ouvrir une image ISO…*, `Ctrl+O`, ou
+glisser-déposer un `.iso` / `.xiso` sur la fenêtre. Le format (XISO, XGD2,
+XGD3) et la taille sont détectés automatiquement ; l'index de recherche se
+construit en arrière-plan.
+2. **Naviguer** — double-cliquez sur un dossier pour le déplier (son contenu
+n'est lu qu'à ce moment). Les colonnes *Taille* et *Secteur* indiquent la
+taille et le secteur de départ ; les dossiers sont regroupés en tête.
+3. **Sélectionner** — clic, `Ctrl+clic` ou `Maj+clic` pour plusieurs éléments,
+fichiers comme dossiers entiers.
+4. **Extraire** — *Extraire la sélection…* (`Ctrl+E`) pour la sélection,
+*Tout extraire…* pour l'image entière, ou clic droit → *Extraire*. Choisissez
+le dossier de destination : la copie se fait dans un thread séparé, affiche
+`pourcentage · 3/8 fichiers extraits` et peut être annulée en cours de route.
+Un rapport signale les éléments ignorés (noms invalides, collisions, secteurs
+nuls).
+5. **Rechercher** — `Ctrl+F`, au moins deux caractères. Le filtre porte sur
+les noms et chemins, plusieurs termes se combinent en ET (`media audio`), et
+les dossiers parents des résultats sont chargés et dépliés automatiquement,
+même s'ils n'avaient jamais été ouverts.
+6. **Calculer les empreintes** — sélectionnez des fichiers ou un dossier,
+puis *Empreintes MD5/SHA1…* (`Ctrl+H`) ou clic droit → *Empreintes*. MD5 et
+SHA1 sont calculés en un seul passage, par blocs, et **Copier (TSV)** exporte
+le tableau dans le presse-papiers.
 
-- **Rechercher** filtre l'arbre en direct sur les noms et chemins ; les
-  dossiers parents des résultats sont chargés et dépliés automatiquement.
-- **Empreintes MD5/SHA1…** (ou clic droit → *Empreintes*) hache les fichiers
-  sélectionnés, ou tout le contenu d'un dossier sélectionné. Un clic sur
-  **Copier (TSV)** place le tableau dans le presse-papiers.
-- Clic droit sur l'arbre : extraction et empreintes directement.
+La recherche filtre l'arbre en direct et ouvre les branches nécessaires :
+
+![Recherche instantanée dans l'arbre](screenshot_search.png)
+
+Le tableau des empreintes se copie au format TSV :
+
+![Empreintes MD5 et SHA1](screenshot_hashes.png)
+
+### Raccourcis clavier
+
+| Raccourci | Action |
+| --- | --- |
+| `Ctrl+O` | Ouvrir une image |
+| `Ctrl+E` | Extraire la sélection |
+| `Ctrl+F` | Rechercher dans l'arbre |
+| `Ctrl+H` | Empreintes MD5 / SHA1 |
+| `Ctrl+Q` | Quitter |
 
 ### Ligne de commande
 
@@ -91,8 +132,10 @@ python main.py --iso game.iso --all -o sortie
 python main.py --iso game.iso --partition-offset 0xFD90000 --info
 ```
 
-`--partition-offset` force l'offset de la partition de jeu si la détection
-automatique échoue (image retravaillée, offset exotique…).
+`--info` affiche le format, la partition et le contenu ; `--list` déroule
+l'arborescence ; `-o` choisit le dossier de sortie (dossier courant par
+défaut). `--partition-offset` force l'offset de la partition de jeu si la
+détection automatique échoue (image retravaillée, offset exotique…).
 
 ### Image de démonstration
 
@@ -220,7 +263,8 @@ résolues à l'extraction.
 python -m unittest discover -s tests -v
 ```
 
-Les 36 tests construisent des images XDVDFS complètes (arbres équilibrés,
+Les 43 tests construisent des images XDVDFS complètes (arbres équilibrés,
 répertoires multi-secteurs, préfixes XGD2/XGD3) et vérifient la détection,
 la navigation, l'extraction octet par octet, l'annulation, la recherche
-instantanée, les empreintes MD5/SHA1 et l'interface Qt.
+instantanée, les empreintes MD5/SHA1, l'interface Qt et la protection contre
+les images cycliques ou trop volumineuses.
